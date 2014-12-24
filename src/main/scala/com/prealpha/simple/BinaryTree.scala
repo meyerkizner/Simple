@@ -15,7 +15,7 @@ private case class Empty[T: Ordering]() extends BinaryTree[T] {
 
   override def contains(elem: T): Boolean = false
 
-  override def fold[U](combine: T => U => U, base: U): U = base
+  override def fold[U](combine: (T, U) => U, base: U): U = base
 
   override protected[simple] def max: Option[T] = None
 }
@@ -58,8 +58,8 @@ private case class Node[T: Ordering](private val left: BinaryTree[T], private va
     }
   }
 
-  override def fold[U](combine: T => U => U, base: U): U = {
-    right.fold(combine, combine(value)(left.fold(combine, base)))
+  override def fold[U](combine: (T, U) => U, base: U): U = {
+    right.fold(combine, combine(value, left.fold(combine, base)))
   }
 
   override protected[simple] def max: Option[T] = right.max match {

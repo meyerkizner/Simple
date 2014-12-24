@@ -7,14 +7,14 @@ trait SimpleSet[T] {
 
   def contains(elem: T): Boolean
 
-  def fold[U](combine: T => U => U, base: U): U
+  def fold[U](combine: (T, U) => U, base: U): U
 
   def union(other: SimpleSet[T]): SimpleSet[T] = {
-    other.fold({ elem => set => set.add(elem) }, this)
+    other.fold({ (elem, set) => set.add(elem) }, this)
   }
 
   def intersection(other: SimpleSet[T]): SimpleSet[T] = {
-    fold({ elem => set =>
+    fold({ (elem, set) =>
       if (other.contains(elem)) {
         set
       } else {
