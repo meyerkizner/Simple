@@ -12,7 +12,7 @@ sealed abstract class AvlTree[T] extends SimpleSet[T] {
 
 object AvlTree {
   private case class Empty[T: Ordering]() extends AvlTree[T] {
-    override def add(elem: T): AvlTree[T] = Node(this, elem, 0, this)
+    override def add(elem: T): AvlTree[T] = Node(this, elem, this)
 
     override def remove(elem: T): AvlTree[T] = this
 
@@ -20,29 +20,26 @@ object AvlTree {
 
     override def fold[U](combine: (T, U) => U, base: U): U = base
 
-    override protected def height: Int = -1
+    override protected val height: Int = -1
 
-    override protected def max: Option[T] = None
+    override protected val max: Option[T] = None
   }
 
   private case class Node[T: Ordering](
       private val left: AvlTree[T],
       private val value: T,
-      protected val height: Int,
       private val right: AvlTree[T])
     extends AvlTree[T] {
 
     import scala.math.Ordering.Implicits._
 
+    override protected lazy val height = Math.max(left.height, right.height) + 1
+
     override def add(elem: T): AvlTree[T] = {
       if (elem < value) {
-        val newLeft = left.add(elem)
-        val newNode = Node(newLeft, value, Math.max(newLeft.height, right.height) + 1, right)
-        newNode.balance
+        Node(left.add(elem), value, right).balance
       } else if (elem > value) {
-        val newRight = right.add(elem)
-        val newNode = Node(left, value, Math.max(left.height, newRight.height) + 1, right)
-        newNode.balance
+        Node(left, value, right.add(elem)).balance
       } else {
         this
       }
@@ -50,21 +47,14 @@ object AvlTree {
 
     override def remove(elem: T): AvlTree[T] = {
       if (elem < value) {
-        val newLeft = left.remove(elem)
-        val newNode = Node(newLeft, value, Math.max(newLeft.height, right.height) + 1, right)
-        newNode.balance
+        Node(left.remove(elem), value, right).balance
       } else if (elem > value) {
-        val newRight = right.remove(elem)
-        val newNode = Node(left, value, Math.max(left.height, newRight.height) + 1, right)
-        newNode.balance
+        Node(left, value, right.remove(elem)).balance
       } else {
         // locate the in-order predecessor of this value
         left.max match {
           case None => right
-          case Some(pred) =>
-            val newLeft = left.remove(pred)
-            val newNode = Node(newLeft, pred, Math.max(newLeft.height, right.height) + 1, right)
-            newNode.balance
+          case Some(pred) => Node(left.remove(pred), pred, right).balance
         }
       }
     }
@@ -100,30 +90,18 @@ object AvlTree {
     }
 
     private def rotateLeft: AvlTree[T] = this match {
-      case Node(t0, x, _, Node(Node(t1, y, _, t2), z, _, t3)) =>
-        val xh = Math.max(t0.height, t1.height) + 1
-        val zh = Math.max(t2.height, t3.height) + 1
-        val yh = Math.max(xh, zh) + 1
-        Node(Node(t0, x, xh, t1), y, yh, Node(t2, z, zh, t3))
-      case Node(t0, x, _, Node(t1, y, _, Node(t2, z, _, t3))) =>
-        val xh = Math.max(t0.height, t1.height) + 1
-        val zh = Math.max(t2.height, t3.height) + 1
-        val yh = Math.max(xh, zh) + 1
-        Node(Node(t0, x, xh, t1), y, yh, Node(t2, z, zh, t3))
+      case Node(t0, x, Node(Node(t1, y, t2), z, t3)) =>
+        Node(Node(t0, x, t1), y, Node(t2, z, t3))
+      case Node(t0, x, Node(t1, y, Node(t2, z, t3))) =>
+        Node(Node(t0, x, t1), y, Node(t2, z, t3))
       case _ => this
     }
 
     private def rotateRight: AvlTree[T] = this match {
-      case Node(Node(t0, x, _, Node(t1, y, _, t2)), z, _, t3) =>
-        val xh = Math.max(t0.height, t1.height) + 1
-        val zh = Math.max(t2.height, t3.height) + 1
-        val yh = Math.max(xh, zh) + 1
-        Node(Node(t0, x, xh, t1), y, yh, Node(t2, z, zh, t3))
-      case Node(Node(Node(t0, x, _, t1), y, _, t2), z, _, t3) =>
-        val xh = Math.max(t0.height, t1.height) + 1
-        val zh = Math.max(t2.height, t3.height) + 1
-        val yh = Math.max(xh, zh) + 1
-        Node(Node(t0, x, xh, t1), y, yh, Node(t2, z, zh, t3))
+      case Node(Node(t0, x, Node(t1, y, t2)), z, t3) =>
+        Node(Node(t0, x, t1), y, Node(t2, z, t3))
+      case Node(Node(Node(t0, x, t1), y, t2), z, t3) =>
+        Node(Node(t0, x, t1), y, Node(t2, z, t3))
       case _ => this
     }
   }
