@@ -5,7 +5,7 @@ sealed abstract class BinaryTree[T] extends SimpleSet[T] {
 
   override def remove(elem: T): BinaryTree[T]
 
-  protected[simple] def max: Option[T]
+  protected def max: Option[T]
 }
 
 object BinaryTree {
@@ -18,7 +18,7 @@ object BinaryTree {
 
     override def fold[U](combine: (T, U) => U, base: U): U = base
 
-    override protected[simple] def max: Option[T] = None
+    override protected def max: Option[T] = None
   }
 
   private case class Node[T: Ordering](private val left: BinaryTree[T], private val value: T,
@@ -63,13 +63,13 @@ object BinaryTree {
       right.fold(combine, combine(value, left.fold(combine, base)))
     }
 
-    override protected[simple] def max: Option[T] = right.max match {
+    override protected def max: Option[T] = right.max match {
       case None => Some(value)
       case Some(max) => Some(max)
     }
   }
 
-  def apply[T](xs: T*): BinaryTree[T] = xs match {
+  def apply[T: Ordering](xs: T*): BinaryTree[T] = xs match {
     case Nil => Empty[T]()
     case hd :: tl => apply[T](tl: _*).add(hd)
   }
