@@ -21,8 +21,12 @@ object BinaryTree {
     override protected def max: Option[T] = None
   }
 
-  private case class Node[T: Ordering](private val left: BinaryTree[T], private val value: T,
-                                       private val right: BinaryTree[T]) extends BinaryTree[T] {
+  private case class Node[T: Ordering](
+      private val left: BinaryTree[T],
+      private val value: T,
+      private val right: BinaryTree[T])
+    extends BinaryTree[T] {
+
     import scala.math.Ordering.Implicits._
 
     override def add(elem: T): BinaryTree[T] = {

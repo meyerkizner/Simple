@@ -25,8 +25,13 @@ object AvlTree {
     override protected def max: Option[T] = None
   }
 
-  private case class Node[T: Ordering](private val left: AvlTree[T], private val value: T, protected val height: Int,
-                                       private val right: AvlTree[T]) extends AvlTree[T] {
+  private case class Node[T: Ordering](
+      private val left: AvlTree[T],
+      private val value: T,
+      protected val height: Int,
+      private val right: AvlTree[T])
+    extends AvlTree[T] {
+
     import scala.math.Ordering.Implicits._
 
     override def add(elem: T): AvlTree[T] = {
