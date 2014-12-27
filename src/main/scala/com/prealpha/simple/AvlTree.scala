@@ -81,9 +81,9 @@ object AvlTree {
     private def balance: AvlTree[T] = {
       val balanceFactor = left.height - right.height
       if (balanceFactor < -1) {
-        rotateRight
-      } else if (balanceFactor > 1) {
         rotateLeft
+      } else if (balanceFactor > 1) {
+        rotateRight
       } else {
         this
       }
