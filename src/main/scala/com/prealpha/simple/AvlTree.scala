@@ -35,6 +35,8 @@ object AvlTree {
 
     override protected lazy val height = Math.max(left.height, right.height) + 1
 
+    private lazy val balanceFactor = left.height - right.height
+
     override def add(elem: T): AvlTree[T] = {
       if (elem < value) {
         Node(left.add(elem), value, right).balance
@@ -78,31 +80,17 @@ object AvlTree {
       case Some(max) => Some(max)
     }
 
-    private def balance: AvlTree[T] = {
-      val balanceFactor = left.height - right.height
-      if (balanceFactor < -1) {
-        rotateLeft
-      } else if (balanceFactor > 1) {
-        rotateRight
-      } else {
+    private def balance: AvlTree[T] = (this, balanceFactor) match {
+      case (Node(t0, x, Node(Node(t1, y, t2), z, t3)), -2) =>
+        Node(Node(t0, x, t1), y, Node(t2, z, t3))
+      case (Node(t0, x, Node(t1, y, Node(t2, z, t3))), -2) =>
+        Node(Node(t0, x, t1), y, Node(t2, z, t3))
+      case (Node(Node(t0, x, Node(t1, y, t2)), z, t3), 2) =>
+        Node(Node(t0, x, t1), y, Node(t2, z, t3))
+      case (Node(Node(Node(t0, x, t1), y, t2), z, t3), 2) =>
+        Node(Node(t0, x, t1), y, Node(t2, z, t3))
+      case _ =>
         this
-      }
-    }
-
-    private def rotateLeft: AvlTree[T] = this match {
-      case Node(t0, x, Node(Node(t1, y, t2), z, t3)) =>
-        Node(Node(t0, x, t1), y, Node(t2, z, t3))
-      case Node(t0, x, Node(t1, y, Node(t2, z, t3))) =>
-        Node(Node(t0, x, t1), y, Node(t2, z, t3))
-      case _ => this
-    }
-
-    private def rotateRight: AvlTree[T] = this match {
-      case Node(Node(t0, x, Node(t1, y, t2)), z, t3) =>
-        Node(Node(t0, x, t1), y, Node(t2, z, t3))
-      case Node(Node(Node(t0, x, t1), y, t2), z, t3) =>
-        Node(Node(t0, x, t1), y, Node(t2, z, t3))
-      case _ => this
     }
   }
 
