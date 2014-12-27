@@ -67,3 +67,10 @@ private case class Node[T: Ordering](private val left: BinaryTree[T], private va
     case Some(max) => Some(max)
   }
 }
+
+object BinaryTree {
+  def apply[T](xs: T*): BinaryTree[T] = xs match {
+    case Nil => Empty[T]()
+    case hd :: tl => apply[T](tl: _*).add(hd)
+  }
+}
