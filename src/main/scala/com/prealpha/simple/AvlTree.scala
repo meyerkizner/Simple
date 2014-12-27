@@ -30,37 +30,38 @@ object AvlTree {
     import scala.math.Ordering.Implicits._
 
     override def add(elem: T): AvlTree[T] = {
-      val inserted =
-        if (elem < value) {
-          val newLeft = left.add(elem)
-          Node(newLeft, value, Math.max(newLeft.height, right.height), right)
-        } else if (elem > value) {
-          val newRight = right.add(elem)
-          Node(left, value, Math.max(left.height, newRight.height), right)
-        } else {
-          this
-        }
-      balance(inserted)
+      if (elem < value) {
+        val newLeft = left.add(elem)
+        val newNode = Node(newLeft, value, Math.max(newLeft.height, right.height), right)
+        newNode.balance
+      } else if (elem > value) {
+        val newRight = right.add(elem)
+        val newNode = Node(left, value, Math.max(left.height, newRight.height), right)
+        newNode.balance
+      } else {
+        this
+      }
     }
 
     override def remove(elem: T): AvlTree[T] = {
-      val deleted =
-        if (elem < value) {
-          val newLeft = left.remove(elem)
-          Node(newLeft, value, Math.max(newLeft.height, right.height), right)
-        } else if (elem > value) {
-          val newRight = right.add(elem)
-          Node(left, value, Math.max(left.height, newRight.height), right)
-        } else {
-          // locate the in-order predecessor of this value
-          left.max match {
-            case None => right
-            case Some(pred) =>
-              val newLeft = left.remove(pred)
-              Node(newLeft, pred, Math.max(newLeft.height, right.height), right)
-          }
+      if (elem < value) {
+        val newLeft = left.remove(elem)
+        val newNode = Node(newLeft, value, Math.max(newLeft.height, right.height), right)
+        newNode.balance
+      } else if (elem > value) {
+        val newRight = right.remove(elem)
+        val newNode = Node(left, value, Math.max(left.height, newRight.height), right)
+        newNode.balance
+      } else {
+        // locate the in-order predecessor of this value
+        left.max match {
+          case None => right
+          case Some(pred) =>
+            val newLeft = left.remove(pred)
+            val newNode = Node(newLeft, pred, Math.max(newLeft.height, right.height), right)
+            newNode.balance
         }
-      balance(deleted)
+      }
     }
 
     override def contains(elem: T): Boolean = {
@@ -81,47 +82,45 @@ object AvlTree {
       case None => Some(value)
       case Some(max) => Some(max)
     }
-  }
 
-  private def balance[T: Ordering](tree: AvlTree[T]): AvlTree[T] = tree match {
-    case Empty() => tree
-    case Node(l, v, h, r) =>
-      val balanceFactor = l.height - r.height
+    private def balance: AvlTree[T] = {
+      val balanceFactor = left.height - right.height
       if (balanceFactor < -1) {
-        rotateRight(tree)
+        rotateRight
       } else if (balanceFactor > 1) {
-        rotateLeft(tree)
+        rotateLeft
       } else {
-        tree
+        this
       }
-  }
+    }
 
-  private def rotateLeft[T: Ordering](tree: AvlTree[T]): AvlTree[T] = tree match {
-    case Node(t0, x, _, Node(Node(t1, y, _, t2), z, _, t3)) =>
-      val xh = Math.max(t0.height, t1.height)
-      val zh = Math.max(t2.height, t3.height)
-      val yh = Math.max(xh, zh)
-      Node(Node(t0, x, xh, t1), y, yh, Node(t2, z, zh, t3))
-    case Node(t0, x, _, Node(t1, y, _, Node(t2, z, _, t3))) =>
-      val xh = Math.max(t0.height, t1.height)
-      val zh = Math.max(t2.height, t3.height)
-      val yh = Math.max(xh, zh)
-      Node(Node(t0, x, xh, t1), y, yh, Node(t2, z, zh, t3))
-    case _ => tree
-  }
+    private def rotateLeft: AvlTree[T] = this match {
+      case Node(t0, x, _, Node(Node(t1, y, _, t2), z, _, t3)) =>
+        val xh = Math.max(t0.height, t1.height)
+        val zh = Math.max(t2.height, t3.height)
+        val yh = Math.max(xh, zh)
+        Node(Node(t0, x, xh, t1), y, yh, Node(t2, z, zh, t3))
+      case Node(t0, x, _, Node(t1, y, _, Node(t2, z, _, t3))) =>
+        val xh = Math.max(t0.height, t1.height)
+        val zh = Math.max(t2.height, t3.height)
+        val yh = Math.max(xh, zh)
+        Node(Node(t0, x, xh, t1), y, yh, Node(t2, z, zh, t3))
+      case _ => this
+    }
 
-  private def rotateRight[T: Ordering](tree: AvlTree[T]): AvlTree[T] = tree match {
-    case Node(Node(t0, x, _, Node(t1, y, _, t2)), z, _, t3) =>
-      val xh = Math.max(t0.height, t1.height)
-      val zh = Math.max(t2.height, t3.height)
-      val yh = Math.max(xh, zh)
-      Node(Node(t0, x, xh, t1), y, yh, Node(t2, z, zh, t3))
-    case Node(Node(Node(t0, x, _, t1), y, _, t2), z, _, t3) =>
-      val xh = Math.max(t0.height, t1.height)
-      val zh = Math.max(t2.height, t3.height)
-      val yh = Math.max(xh, zh)
-      Node(Node(t0, x, xh, t1), y, yh, Node(t2, z, zh, t3))
-    case _ => tree
+    private def rotateRight: AvlTree[T] = this match {
+      case Node(Node(t0, x, _, Node(t1, y, _, t2)), z, _, t3) =>
+        val xh = Math.max(t0.height, t1.height)
+        val zh = Math.max(t2.height, t3.height)
+        val yh = Math.max(xh, zh)
+        Node(Node(t0, x, xh, t1), y, yh, Node(t2, z, zh, t3))
+      case Node(Node(Node(t0, x, _, t1), y, _, t2), z, _, t3) =>
+        val xh = Math.max(t0.height, t1.height)
+        val zh = Math.max(t2.height, t3.height)
+        val yh = Math.max(xh, zh)
+        Node(Node(t0, x, xh, t1), y, yh, Node(t2, z, zh, t3))
+      case _ => this
+    }
   }
 
   def apply[T: Ordering](xs: T*): AvlTree[T] = xs match {
