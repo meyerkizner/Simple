@@ -18,7 +18,7 @@ object AvlTree {
 
     override def contains(elem: T): Boolean = false
 
-    override def fold[U](combine: (T, U) => U, base: U): U = base
+    override def fold[U](base: U)(combine: (U, T) => U): U = base
 
     override protected val height: Int = -1
 
@@ -71,8 +71,8 @@ object AvlTree {
       }
     }
 
-    override def fold[U](combine: (T, U) => U, base: U): U = {
-      right.fold(combine, combine(value, left.fold(combine, base)))
+    override def fold[U](base: U)(combine: (U, T) => U): U = {
+      right.fold(combine(left.fold(base)(combine), value))(combine)
     }
 
     override protected def max: Option[T] = right.max match {
