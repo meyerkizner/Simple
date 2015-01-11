@@ -264,4 +264,9 @@ object TwoThreeTree {
       case Some(max) => Some(max)
     }
   }
+
+  def apply[T: Ordering](xs: T*): TwoThreeTree[T] = xs match {
+    case Nil => Empty()
+    case hd :: tl => TwoThreeTree(tl: _*).add(hd)
+  }
 }

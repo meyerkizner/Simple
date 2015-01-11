@@ -74,7 +74,7 @@ object BinaryTree {
   }
 
   def apply[T: Ordering](xs: T*): BinaryTree[T] = xs match {
-    case Nil => Empty[T]()
-    case hd :: tl => apply[T](tl: _*).add(hd)
+    case Nil => Empty()
+    case hd :: tl => BinaryTree[T](tl: _*).add(hd)
   }
 }
