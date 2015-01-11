@@ -4,11 +4,6 @@ sealed abstract class RedBlackTree[T: Ordering] extends SimpleSet[T] {
   protected type InvalidRed = Either[(RedBlackTree.RedNode[T], T, RedBlackTree.BlackNode[T]),
     (RedBlackTree.BlackNode[T], T, RedBlackTree.RedNode[T])]
 
-  protected final def repaintInvalid(invalid: InvalidRed) = {
-    val (left, value, right) = invalid.merge
-    RedBlackTree.BlackNonEmpty(left, value, right)
-  }
-
   protected def doAdd(elem: T): Either[InvalidRed, RedBlackTree[T]]
 
   override final def add(elem: T): RedBlackTree[T] = doAdd(elem) match {
@@ -87,6 +82,11 @@ object RedBlackTree {
       private val value: T,
       private val right: RedBlackTree[T])
     extends BlackNode[T] {
+
+    private def repaintInvalid(invalid: InvalidRed): BlackNode[T] = {
+      val (left, value, right) = invalid.merge
+      BlackNonEmpty(left, value, right)
+    }
 
     override protected[RedBlackTree] def doAdd(elem: T): Right[InvalidRed, RedBlackTree[T]] = {
       if (elem < value) {
