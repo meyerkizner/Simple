@@ -14,10 +14,7 @@ sealed abstract class TwoThreeTree[T: Ordering] extends SimpleSet[T] {
 
   protected def doRemove(elem: T): Either[TwoThreeTree[T], TwoThreeTree[T]]
 
-  override final def remove(elem: T): TwoThreeTree[T] = doRemove(elem) match {
-    case Left(tree) => tree
-    case Right(tree) => tree
-  }
+  override final def remove(elem: T): TwoThreeTree[T] = doRemove(elem).merge
 
   protected def max: Option[T]
 }

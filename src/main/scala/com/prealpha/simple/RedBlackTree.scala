@@ -4,13 +4,15 @@ sealed abstract class RedBlackTree[T: Ordering] extends SimpleSet[T] {
   protected type InvalidRed = Either[(RedBlackTree.RedNode[T], T, RedBlackTree.BlackNode[T]),
     (RedBlackTree.BlackNode[T], T, RedBlackTree.RedNode[T])]
 
+  protected final def repaintInvalid(invalid: InvalidRed): RedBlackTree.BlackNode[T] = {
+    val (left, value, right) = invalid.merge
+    RedBlackTree.BlackNonEmpty(left, value, right)
+  }
+
   protected def doAdd(elem: T): Either[InvalidRed, RedBlackTree[T]]
 
   override final def add(elem: T): RedBlackTree[T] = doAdd(elem) match {
-    case Left(Left((left, value, right))) =>
-      RedBlackTree.BlackNonEmpty(left, value, right)
-    case Left(Right((left, value, right))) =>
-      RedBlackTree.BlackNonEmpty(left, value, right)
+    case Left(invalid) => repaintInvalid(invalid)
     case Right(tree) => tree
   }
 }
@@ -18,7 +20,7 @@ sealed abstract class RedBlackTree[T: Ordering] extends SimpleSet[T] {
 object RedBlackTree {
   import scala.math.Ordering.Implicits._
 
-  protected abstract class BlackNode[T: Ordering] extends RedBlackTree[T] {
+  protected abstract sealed class BlackNode[T: Ordering] extends RedBlackTree[T] {
     override protected[RedBlackTree] def doAdd(elem: T): Right[InvalidRed, RedBlackTree[T]]
   }
 
@@ -43,19 +45,17 @@ object RedBlackTree {
     override protected def doAdd(elem: T): Either[InvalidRed, RedBlackTree[T]] = {
       if (elem < value) {
         left.doAdd(elem) match {
-          case Right(RedNode(farLeft, leftValue, middleLeft)) =>
-            val leftChild = RedNode(farLeft, leftValue, middleLeft)
+          case Right(leftChild: RedNode[T]) =>
             Left(Left((leftChild, value, right)))
-          case Right(leftChild) =>
-            Right(RedNode(leftChild.asInstanceOf[BlackNode[T]], value, right))
+          case Right(leftChild: BlackNode[T]) =>
+            Right(RedNode(leftChild, value, right))
         }
       } else if (elem > value) {
         right.doAdd(elem) match {
-          case Right(RedNode(middleRight, rightValue, farRight)) =>
-            val rightChild = RedNode(middleRight, rightValue, farRight)
+          case Right(rightChild: RedNode[T]) =>
             Left(Right((left, value, rightChild)))
-          case Right(rightChild) =>
-            Right(RedNode(left, value, rightChild.asInstanceOf[BlackNode[T]]))
+          case Right(rightChild: BlackNode[T]) =>
+            Right(RedNode(left, value, rightChild))
         }
       } else {
         Right(this)
@@ -83,11 +83,6 @@ object RedBlackTree {
       private val right: RedBlackTree[T])
     extends BlackNode[T] {
 
-    private def repaintInvalid(invalid: InvalidRed): BlackNode[T] = {
-      val (left, value, right) = invalid.merge
-      BlackNonEmpty(left, value, right)
-    }
-
     override protected[RedBlackTree] def doAdd(elem: T): Right[InvalidRed, RedBlackTree[T]] = {
       if (elem < value) {
         (left.doAdd(elem), right) match {
@@ -96,18 +91,20 @@ object RedBlackTree {
             val leftChild = repaintInvalid(invalid)
             val rightChild = BlackNonEmpty(rightMiddle, rightValue, farRight)
             Right(RedNode(leftChild, value, rightChild))
-          case (Left(Left((RedNode(farLeft, leftValue, leftMiddle), middleValue, rightMiddle))), _) =>
+          case (Left(Left((RedNode(farLeft, leftValue, leftMiddle), middleValue, rightMiddle))),
+                farRight: BlackNode[T]) =>
             // single rotation to make both child nodes red
             val leftChild = RedNode(farLeft, leftValue, leftMiddle)
-            val rightChild = RedNode(rightMiddle, value, right.asInstanceOf[BlackNode[T]])
+            val rightChild = RedNode(rightMiddle, value, farRight)
             Right(BlackNonEmpty(leftChild, middleValue, rightChild))
-          case (Left(Right((farLeft, leftValue, RedNode(leftMiddle, middleValue, rightMiddle)))), _) =>
+          case (Left(Right((farLeft, leftValue, RedNode(leftMiddle, middleValue, rightMiddle)))),
+                farRight: BlackNode[T]) =>
             // double rotation to make both child nodes red
             val leftChild = RedNode(farLeft, leftValue, leftMiddle)
-            val rightChild = RedNode(rightMiddle, value, right.asInstanceOf[BlackNode[T]])
+            val rightChild = RedNode(rightMiddle, value, farRight)
             Right(BlackNonEmpty(leftChild, middleValue, rightChild))
-          case (Right(leftChild), _) =>
-            Right(BlackNonEmpty(leftChild, value, right))
+          case (Right(leftChild), rightChild) =>
+            Right(BlackNonEmpty(leftChild, value, rightChild))
         }
       } else if (elem > value) {
         (left, right.doAdd(elem)) match {
@@ -116,18 +113,20 @@ object RedBlackTree {
             val leftChild = BlackNonEmpty(farLeft, leftValue, leftMiddle)
             val rightChild = repaintInvalid(invalid)
             Right(RedNode(leftChild, value, rightChild))
-          case (_, Left(Left((RedNode(leftMiddle, middleValue, rightMiddle), rightValue, farRight)))) =>
+          case (farLeft: BlackNode[T],
+                Left(Left((RedNode(leftMiddle, middleValue, rightMiddle), rightValue, farRight)))) =>
             // double rotation to make both child nodes red
-            val leftChild = RedNode(left.asInstanceOf[BlackNode[T]], value, leftMiddle)
+            val leftChild = RedNode(farLeft, value, leftMiddle)
             val rightChild = RedNode(rightMiddle, rightValue, farRight)
             Right(BlackNonEmpty(leftChild, middleValue, rightChild))
-          case (_, Left(Right((leftMiddle, middleValue, RedNode(rightMiddle, rightValue, farRight))))) =>
+          case (farLeft: BlackNode[T],
+                Left(Right((leftMiddle, middleValue, RedNode(rightMiddle, rightValue, farRight))))) =>
             // single rotation to make both child nodes red
-            val leftChild = RedNode(left.asInstanceOf[BlackNode[T]], value, leftMiddle)
+            val leftChild = RedNode(farLeft, value, leftMiddle)
             val rightChild = RedNode(rightMiddle, rightValue, farRight)
             Right(BlackNonEmpty(leftChild, middleValue, rightChild))
-          case (_, Right(rightChild)) =>
-            Right(BlackNonEmpty(left, value, rightChild))
+          case (leftChild, Right(rightChild)) =>
+            Right(BlackNonEmpty(leftChild, value, rightChild))
         }
       } else {
         Right(this)
