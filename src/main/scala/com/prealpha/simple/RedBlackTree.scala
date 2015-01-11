@@ -4,6 +4,11 @@ sealed abstract class RedBlackTree[T: Ordering] extends SimpleSet[T] {
   protected type InvalidRed = Either[(RedBlackTree.RedNode[T], T, RedBlackTree.BlackNode[T]),
     (RedBlackTree.BlackNode[T], T, RedBlackTree.RedNode[T])]
 
+  protected final def repaintInvalid(invalid: InvalidRed) = {
+    val (left, value, right) = invalid.merge
+    RedBlackTree.BlackNonEmpty(left, value, right)
+  }
+
   protected def doAdd(elem: T): Either[InvalidRed, RedBlackTree[T]]
 
   override final def add(elem: T): RedBlackTree[T] = doAdd(elem) match {
@@ -86,14 +91,9 @@ object RedBlackTree {
     override protected[RedBlackTree] def doAdd(elem: T): Right[InvalidRed, RedBlackTree[T]] = {
       if (elem < value) {
         (left.doAdd(elem), right) match {
-          case (Left(Left((farLeft, leftValue, leftMiddle))), RedNode(rightMiddle, rightValue, farRight)) =>
+          case (Left(invalid), RedNode(rightMiddle, rightValue, farRight)) =>
             // re-color both children as black and this node as red to restore balance
-            val leftChild = BlackNonEmpty(farLeft, leftValue, leftMiddle)
-            val rightChild = BlackNonEmpty(rightMiddle, rightValue, farRight)
-            Right(RedNode(leftChild, value, rightChild))
-          case (Left(Right((farLeft, leftValue, leftMiddle))), RedNode(rightMiddle, rightValue, farRight)) =>
-            // identical to previous case
-            val leftChild = BlackNonEmpty(farLeft, leftValue, leftMiddle)
+            val leftChild = repaintInvalid(invalid)
             val rightChild = BlackNonEmpty(rightMiddle, rightValue, farRight)
             Right(RedNode(leftChild, value, rightChild))
           case (Left(Left((RedNode(farLeft, leftValue, leftMiddle), middleValue, rightMiddle))), _) =>
@@ -111,15 +111,10 @@ object RedBlackTree {
         }
       } else if (elem > value) {
         (left, right.doAdd(elem)) match {
-          case (RedNode(farLeft, leftValue, leftMiddle), Left(Left((rightMiddle, rightValue, farRight)))) =>
+          case (RedNode(farLeft, leftValue, leftMiddle), Left(invalid)) =>
             // re-color both children as black and this node as red to restore balance
             val leftChild = BlackNonEmpty(farLeft, leftValue, leftMiddle)
-            val rightChild = BlackNonEmpty(rightMiddle, rightValue, farRight)
-            Right(RedNode(leftChild, value, rightChild))
-          case (RedNode(farLeft, leftValue, leftMiddle), Left(Right((rightMiddle, rightValue, farRight)))) =>
-            // identical to previous case
-            val leftChild = BlackNonEmpty(farLeft, leftValue, leftMiddle)
-            val rightChild = BlackNonEmpty(rightMiddle, rightValue, farRight)
+            val rightChild = repaintInvalid(invalid)
             Right(RedNode(leftChild, value, rightChild))
           case (_, Left(Left((RedNode(leftMiddle, middleValue, rightMiddle), rightValue, farRight)))) =>
             // double rotation to make both child nodes red
