@@ -26,7 +26,7 @@ object TwoThreeTree {
   import scala.math.Ordering.Implicits._
 
   private case class Empty[T: Ordering]() extends TwoThreeTree[T] {
-    override protected def doAdd(elem: T): Either[SplitNode, TwoThreeTree[T]] = Right(TwoNode(this, elem, this))
+    override protected def doAdd(elem: T): Either[SplitNode, TwoThreeTree[T]] = Left((this, elem, this))
 
     override protected def doRemove(elem: T): Either[TwoThreeTree[T], TwoThreeTree[T]] = Right(this)
 
