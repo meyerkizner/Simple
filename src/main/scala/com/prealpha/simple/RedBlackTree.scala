@@ -20,7 +20,7 @@ sealed abstract class RedBlackTree[T: Ordering] extends SimpleSet[T] {
 object RedBlackTree {
   import scala.math.Ordering.Implicits._
 
-  protected abstract sealed class BlackNode[T: Ordering] extends RedBlackTree[T] {
+  protected sealed abstract class BlackNode[T: Ordering] extends RedBlackTree[T] {
     override protected[RedBlackTree] def doAdd(elem: T): Right[InvalidRed, RedBlackTree[T]]
   }
 
@@ -36,48 +36,7 @@ object RedBlackTree {
     override def fold[U](base: U)(combine: (U, T) => U): U = base
   }
 
-  protected case class RedNode[T: Ordering](
-      private val left: BlackNode[T],
-      private val value: T,
-      private val right: BlackNode[T])
-    extends RedBlackTree[T] {
-
-    override protected def doAdd(elem: T): Either[InvalidRed, RedBlackTree[T]] = {
-      if (elem < value) {
-        left.doAdd(elem) match {
-          case Right(leftChild: RedNode[T]) =>
-            Left(Left((leftChild, value, right)))
-          case Right(leftChild: BlackNode[T]) =>
-            Right(RedNode(leftChild, value, right))
-        }
-      } else if (elem > value) {
-        right.doAdd(elem) match {
-          case Right(rightChild: RedNode[T]) =>
-            Left(Right((left, value, rightChild)))
-          case Right(rightChild: BlackNode[T]) =>
-            Right(RedNode(left, value, rightChild))
-        }
-      } else {
-        Right(this)
-      }
-    }
-
-    override def contains(elem: T): Boolean = {
-      if (elem < value) {
-        left.contains(elem)
-      } else if (elem > value) {
-        right.contains(elem)
-      } else {
-        true
-      }
-    }
-
-    override def fold[U](base: U)(combine: (U, T) => U): U = {
-      right.fold(combine(left.fold(base)(combine), value))(combine)
-    }
-  }
-
-  protected case class BlackNonEmpty[T: Ordering](
+  private case class BlackNonEmpty[T: Ordering](
       private val left: RedBlackTree[T],
       private val value: T,
       private val right: RedBlackTree[T])
@@ -127,6 +86,47 @@ object RedBlackTree {
             Right(BlackNonEmpty(leftChild, middleValue, rightChild))
           case (leftChild, Right(rightChild)) =>
             Right(BlackNonEmpty(leftChild, value, rightChild))
+        }
+      } else {
+        Right(this)
+      }
+    }
+
+    override def contains(elem: T): Boolean = {
+      if (elem < value) {
+        left.contains(elem)
+      } else if (elem > value) {
+        right.contains(elem)
+      } else {
+        true
+      }
+    }
+
+    override def fold[U](base: U)(combine: (U, T) => U): U = {
+      right.fold(combine(left.fold(base)(combine), value))(combine)
+    }
+  }
+
+  protected case class RedNode[T: Ordering](
+      private val left: BlackNode[T],
+      private val value: T,
+      private val right: BlackNode[T])
+    extends RedBlackTree[T] {
+
+    override protected def doAdd(elem: T): Either[InvalidRed, RedBlackTree[T]] = {
+      if (elem < value) {
+        left.doAdd(elem) match {
+          case Right(leftChild: RedNode[T]) =>
+            Left(Left((leftChild, value, right)))
+          case Right(leftChild: BlackNode[T]) =>
+            Right(RedNode(leftChild, value, right))
+        }
+      } else if (elem > value) {
+        right.doAdd(elem) match {
+          case Right(rightChild: RedNode[T]) =>
+            Left(Right((left, value, rightChild)))
+          case Right(rightChild: BlackNode[T]) =>
+            Right(RedNode(left, value, rightChild))
         }
       } else {
         Right(this)
