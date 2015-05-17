@@ -31,7 +31,7 @@ object TwoThreeTree {
 
     override def fold[U](base: U)(combine: (U, T) => U): U = base
 
-    override protected def max: Option[T] = None
+    override protected val max: Option[T] = None
   }
 
   private case class TwoNode[T: Ordering](
@@ -116,10 +116,7 @@ object TwoThreeTree {
       right.fold(combine(left.fold(base)(combine), value))(combine)
     }
 
-    override protected def max: Option[T] = right.max match {
-      case None => Some(value)
-      case Some(max) => Some(max)
-    }
+    override protected lazy val max: Option[T] = right.max orElse Some(value)
   }
 
   private case class ThreeNode[T: Ordering](
@@ -256,10 +253,7 @@ object TwoThreeTree {
       right.fold(combine(middle.fold(combine(left.fold(base)(combine), leftValue))(combine), rightValue))(combine)
     }
 
-    override protected def max: Option[T] = right.max match {
-      case None => Some(rightValue)
-      case Some(max) => Some(max)
-    }
+    override protected lazy val max: Option[T] = right.max orElse Some(rightValue)
   }
 
   def apply[T: Ordering](xs: T*): TwoThreeTree[T] = xs match {

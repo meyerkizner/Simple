@@ -43,7 +43,7 @@ object RedBlackTree {
 
     override def fold[U](base: U)(combine: (U, T) => U): U = base
 
-    override protected[RedBlackTree] def max: Option[T] = None
+    override protected[RedBlackTree] val max: Option[T] = None
   }
 
   private case class BlackNonEmpty[T: Ordering](
@@ -193,10 +193,7 @@ object RedBlackTree {
       right.fold(combine(left.fold(base)(combine), value))(combine)
     }
 
-    override protected[RedBlackTree] def max: Option[T] = right.max match {
-      case None => Some(value)
-      case Some(max) => Some(max)
-    }
+    override protected lazy val max: Option[T] = right.max orElse Some(value)
   }
 
   protected case class RedNode[T: Ordering](
@@ -285,9 +282,6 @@ object RedBlackTree {
       right.fold(combine(left.fold(base)(combine), value))(combine)
     }
 
-    override protected def max: Option[T] = right.max match {
-      case None => Some(value)
-      case Some(max) => Some(max)
-    }
+    override protected lazy val max: Option[T] = right.max orElse Some(value)
   }
 }

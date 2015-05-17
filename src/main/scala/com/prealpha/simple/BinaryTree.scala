@@ -18,7 +18,7 @@ object BinaryTree {
 
     override def fold[U](base: U)(combine: (U, T) => U): U = base
 
-    override protected def max: Option[T] = None
+    override protected val max: Option[T] = None
   }
 
   private case class Node[T: Ordering](
@@ -67,10 +67,7 @@ object BinaryTree {
       right.fold(combine(left.fold(base)(combine), value))(combine)
     }
 
-    override protected def max: Option[T] = right.max match {
-      case None => Some(value)
-      case Some(max) => Some(max)
-    }
+    override protected lazy val max: Option[T] = right.max orElse Some(value)
   }
 
   def apply[T: Ordering](xs: T*): BinaryTree[T] = xs match {

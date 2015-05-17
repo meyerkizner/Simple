@@ -75,10 +75,7 @@ object AvlTree {
       right.fold(combine(left.fold(base)(combine), value))(combine)
     }
 
-    override protected def max: Option[T] = right.max match {
-      case None => Some(value)
-      case Some(max) => Some(max)
-    }
+    override protected lazy val max: Option[T] = right.max orElse Some(value)
 
     private def balance: AvlTree[T] = (this, balanceFactor) match {
       case (Node(t0, x, Node(Node(t1, y, t2), z, t3)), -2) =>
