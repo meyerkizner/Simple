@@ -70,8 +70,5 @@ object BinaryTree {
     override protected lazy val max: Option[T] = right.max orElse Some(value)
   }
 
-  def apply[T: Ordering](xs: T*): BinaryTree[T] = xs match {
-    case Nil => Empty()
-    case hd :: tl => BinaryTree[T](tl: _*).add(hd)
-  }
+  def apply[T: Ordering](xs: T*): BinaryTree[T] = ((Empty(): BinaryTree[T]) /: xs) (_.add(_))
 }

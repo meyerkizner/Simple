@@ -256,8 +256,5 @@ object TwoThreeTree {
     override protected lazy val max: Option[T] = right.max orElse Some(rightValue)
   }
 
-  def apply[T: Ordering](xs: T*): TwoThreeTree[T] = xs match {
-    case Nil => Empty()
-    case hd :: tl => TwoThreeTree(tl: _*).add(hd)
-  }
+  def apply[T: Ordering](xs: T*): TwoThreeTree[T] = ((Empty(): TwoThreeTree[T]) /: xs) (_.add(_))
 }

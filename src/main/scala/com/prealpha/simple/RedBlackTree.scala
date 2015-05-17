@@ -285,8 +285,5 @@ object RedBlackTree {
     override protected lazy val max: Option[T] = right.max orElse Some(value)
   }
 
-  def apply[T: Ordering](xs: T*): RedBlackTree[T] = xs match {
-    case Nil => Empty()
-    case hd :: tl => RedBlackTree(tl: _*).add(hd)
-  }
+  def apply[T: Ordering](xs: T*): RedBlackTree[T] = ((Empty(): RedBlackTree[T]) /: xs) (_.add(_))
 }

@@ -91,8 +91,5 @@ object AvlTree {
     }
   }
 
-  def apply[T: Ordering](xs: T*): AvlTree[T] = xs match {
-    case Nil => Empty()
-    case hd :: tl => AvlTree(tl: _*).add(hd)
-  }
+  def apply[T: Ordering](xs: T*): AvlTree[T] = ((Empty(): AvlTree[T]) /: xs) (_.add(_))
 }
