@@ -15,6 +15,12 @@ sealed abstract class RedBlackTree[T: Ordering] extends SimpleSet[T] {
     case Left(invalid) => repaintInvalid(invalid)
     case Right(tree) => tree
   }
+
+  protected def doRemove(elem: T): Either[RedBlackTree.BlackNode[T], RedBlackTree[T]]
+
+  override final def remove(elem: T): RedBlackTree[T] = doRemove(elem).merge
+
+  protected def max: Option[T]
 }
 
 object RedBlackTree {
@@ -22,6 +28,8 @@ object RedBlackTree {
 
   protected sealed abstract class BlackNode[T: Ordering] extends RedBlackTree[T] {
     override protected[RedBlackTree] def doAdd(elem: T): Right[InvalidRed, RedBlackTree[T]]
+
+    override protected[RedBlackTree] def doRemove(elem: T): Either[BlackNode[T], BlackNode[T]]
   }
 
   private case class Empty[T: Ordering]() extends BlackNode[T] {
@@ -29,11 +37,13 @@ object RedBlackTree {
       Right(RedNode(this, elem, this))
     }
 
-    override def remove(elem: T): RedBlackTree[T] = this
+    override protected[RedBlackTree] def doRemove(elem: T): Either[BlackNode[T], BlackNode[T]] = Right(this)
 
     override def contains(elem: T): Boolean = false
 
     override def fold[U](base: U)(combine: (U, T) => U): U = base
+
+    override protected[RedBlackTree] def max: Option[T] = None
   }
 
   private case class BlackNonEmpty[T: Ordering](
@@ -92,6 +102,83 @@ object RedBlackTree {
       }
     }
 
+    override protected[RedBlackTree] def doRemove(elem: T): Either[BlackNode[T], BlackNode[T]] = {
+      if (elem <= value) {
+        val anchor = if (elem == value) left.max else Some(value)
+        anchor map { anchorValue =>
+          val toRemove = if (elem == value) anchorValue else elem
+          (left.doRemove(toRemove), right) match {
+            case (Left(_), Empty()) | (Left(_), RedNode(Empty(), _, _)) | (Left(_), RedNode(_, _, Empty())) =>
+              throw new IllegalStateException("unbalanced RedBlackTree")
+            case (Left(orphan), RedNode(BlackNonEmpty(leftMiddle: BlackNode[T], middleValue, rightMiddle: BlackNode[T]), rightValue, farRight)) =>
+              val leftChild = BlackNonEmpty(orphan, anchorValue, RedNode(leftMiddle, middleValue, rightMiddle))
+              Right(BlackNonEmpty(leftChild, rightValue, farRight))
+            case (Left(orphan), RedNode(BlackNonEmpty(RedNode(farLeft, leftValue, leftMiddle), middleValue, rightMiddle: BlackNode[T]), rightValue, farRight)) =>
+              val farLeftChild = BlackNonEmpty(orphan, anchorValue, farLeft)
+              val leftMiddleChild = BlackNonEmpty(leftMiddle, middleValue, rightMiddle)
+              val leftChild = BlackNonEmpty(farLeftChild, leftValue, leftMiddleChild)
+              Right(BlackNonEmpty(leftChild, rightValue, farRight))
+            case (Left(orphan), RedNode(BlackNonEmpty(farLeft, leftValue, RedNode(leftMiddle, middleValue, rightMiddle)), rightValue, farRight)) =>
+              val farLeftChild = BlackNonEmpty(orphan, anchorValue, farLeft)
+              val leftMiddleChild = BlackNonEmpty(leftMiddle, middleValue, rightMiddle)
+              val leftChild = BlackNonEmpty(farLeftChild, leftValue, leftMiddleChild)
+              Right(BlackNonEmpty(leftChild, rightValue, farRight))
+            case (Left(orphan), BlackNonEmpty(rightMiddle: BlackNode[T], rightValue, farRight: BlackNode[T])) =>
+              val rightChild = RedNode(rightMiddle, rightValue, farRight)
+              Left(BlackNonEmpty(orphan, anchorValue, rightChild))
+            case (Left(orphan), BlackNonEmpty(RedNode(leftMiddle, middleValue, rightMiddle), rightValue, farRight: BlackNode[T])) =>
+              val leftChild = BlackNonEmpty(orphan, anchorValue, leftMiddle)
+              val rightChild = BlackNonEmpty(rightMiddle, rightValue, farRight)
+              Right(BlackNonEmpty(leftChild, middleValue, rightChild))
+            case (Left(orphan), BlackNonEmpty(leftMiddle, middleValue, RedNode(rightMiddle, rightValue, farRight))) =>
+              val leftChild = BlackNonEmpty(orphan, anchorValue, leftMiddle)
+              val rightChild = BlackNonEmpty(rightMiddle, rightValue, farRight)
+              Right(BlackNonEmpty(leftChild, middleValue, rightChild))
+            case (Right(leftChild), rightChild) =>
+              Right(BlackNonEmpty(leftChild, anchorValue, rightChild))
+          }
+        } getOrElse {
+          right match {
+            case RedNode(leftChild, newValue, rightChild) =>
+              Right(BlackNonEmpty(leftChild, newValue, rightChild))
+            case newTree: BlackNode[T] =>
+              Left(newTree)
+          }
+        }
+      } else {
+        (left, right.doRemove(elem)) match {
+          case (Empty(), Left(_)) | (RedNode(Empty(), _, _), Left(_)) | (RedNode(_, _, Empty()), Left(_)) =>
+            throw new IllegalStateException("unbalanced RedBlackTree")
+          case (RedNode(farLeft, leftValue, BlackNonEmpty(leftMiddle: BlackNode[T], middleValue, rightMiddle: BlackNode[T])), Left(orphan)) =>
+            val rightChild = BlackNonEmpty(RedNode(leftMiddle, middleValue, rightMiddle), value, orphan)
+            Right(BlackNonEmpty(farLeft, leftValue, rightChild))
+          case (RedNode(farLeft, leftValue, BlackNonEmpty(leftMiddle: BlackNode[T], middleValue, RedNode(rightMiddle, rightValue, farRight))), Left(orphan)) =>
+            val rightMiddleChild = BlackNonEmpty(leftMiddle, middleValue, rightMiddle)
+            val farRightChild = BlackNonEmpty(farRight, value, orphan)
+            val rightChild = BlackNonEmpty(rightMiddleChild, rightValue, farRightChild)
+            Right(BlackNonEmpty(farLeft, leftValue, rightChild))
+          case (RedNode(farLeft, leftValue, BlackNonEmpty(RedNode(leftMiddle, middleValue, rightMiddle), rightValue, farRight)), Left(orphan)) =>
+            val rightMiddleChild = BlackNonEmpty(leftMiddle, middleValue, rightMiddle)
+            val farRightChild = BlackNonEmpty(farRight, value, orphan)
+            val rightChild = BlackNonEmpty(rightMiddleChild, rightValue, farRightChild)
+            Right(BlackNonEmpty(farLeft, leftValue, rightChild))
+          case (BlackNonEmpty(farLeft: BlackNode[T], leftValue, leftMiddle: BlackNode[T]), Left(orphan)) =>
+            val leftChild = RedNode(farLeft, leftValue, leftMiddle)
+            Left(BlackNonEmpty(leftChild, value, orphan))
+          case (BlackNonEmpty(farLeft: BlackNode[T], leftValue, RedNode(leftMiddle, middleValue, rightMiddle)), Left(orphan)) =>
+            val leftChild = BlackNonEmpty(farLeft, leftValue, leftMiddle)
+            val rightChild = BlackNonEmpty(rightMiddle, value, orphan)
+            Right(BlackNonEmpty(leftChild, middleValue, rightChild))
+          case (BlackNonEmpty(RedNode(farLeft, leftValue, leftMiddle), middleValue, rightMiddle), Left(orphan)) =>
+            val leftChild = BlackNonEmpty(farLeft, leftValue, leftMiddle)
+            val rightChild = BlackNonEmpty(rightMiddle, value, orphan)
+            Right(BlackNonEmpty(leftChild, middleValue, rightChild))
+          case (leftChild, Right(rightChild)) =>
+            Right(BlackNonEmpty(leftChild, value, rightChild))
+        }
+      }
+    }
+
     override def contains(elem: T): Boolean = {
       if (elem < value) {
         left.contains(elem)
@@ -104,6 +191,11 @@ object RedBlackTree {
 
     override def fold[U](base: U)(combine: (U, T) => U): U = {
       right.fold(combine(left.fold(base)(combine), value))(combine)
+    }
+
+    override protected[RedBlackTree] def max: Option[T] = right.max match {
+      case None => Some(value)
+      case Some(max) => Some(max)
     }
   }
 
@@ -133,6 +225,52 @@ object RedBlackTree {
       }
     }
 
+    override protected def doRemove(elem: T): Either[BlackNode[T], RedBlackTree[T]] = {
+      if (elem <= value) {
+        val anchor = if (elem == value) left.max else Some(value)
+        anchor map { anchorValue =>
+          val toRemove = if (elem == value) anchorValue else elem
+          (left.doRemove(toRemove), right) match {
+            case (Left(_), Empty()) =>
+              throw new IllegalStateException("unbalanced RedBlackTree")
+            case (Left(orphan), BlackNonEmpty(rightMiddle: BlackNode[T], rightValue, farRight: BlackNode[T])) =>
+              val rightChild = RedNode(rightMiddle, rightValue, farRight)
+              Right(BlackNonEmpty(orphan, anchorValue, rightChild))
+            case (Left(orphan), BlackNonEmpty(RedNode(leftMiddle, middleValue, rightMiddle), rightValue, farRight: BlackNode[T])) =>
+              val leftChild = BlackNonEmpty(orphan, anchorValue, leftMiddle)
+              val rightChild = BlackNonEmpty(rightMiddle, rightValue, farRight)
+              Right(RedNode(leftChild, middleValue, rightChild))
+            case (Left(orphan), BlackNonEmpty(leftMiddle, middleValue, RedNode(rightMiddle, rightValue, farRight))) =>
+              val leftChild = BlackNonEmpty(orphan, anchorValue, leftMiddle)
+              val rightChild = BlackNonEmpty(rightMiddle, rightValue, farRight)
+              Right(RedNode(leftChild, middleValue, rightChild))
+            case (Right(leftChild), rightChild) =>
+              Right(RedNode(leftChild, anchorValue, rightChild))
+          }
+        } getOrElse {
+          Right(right)
+        }
+      } else {
+        (left, right.doRemove(elem)) match {
+          case (Empty(), Left(_)) =>
+            throw new IllegalStateException("unbalanced RedBlackTree")
+          case (BlackNonEmpty(farLeft: BlackNode[T], leftValue, leftMiddle: BlackNode[T]), Left(orphan)) =>
+            val leftChild = RedNode(farLeft, leftValue, leftMiddle)
+            Right(BlackNonEmpty(leftChild, value, orphan))
+          case (BlackNonEmpty(farLeft: BlackNode[T], leftValue, RedNode(leftMiddle, middleValue, rightMiddle)), Left(orphan)) =>
+            val leftChild = BlackNonEmpty(farLeft, leftValue, leftMiddle)
+            val rightChild = BlackNonEmpty(rightMiddle, value, orphan)
+            Right(RedNode(leftChild, middleValue, rightChild))
+          case (BlackNonEmpty(RedNode(farLeft, leftValue, leftMiddle), middleValue, rightMiddle), Left(orphan)) =>
+            val leftChild = BlackNonEmpty(farLeft, leftValue, leftMiddle)
+            val rightChild = BlackNonEmpty(rightMiddle, value, orphan)
+            Right(RedNode(leftChild, middleValue, rightChild))
+          case (leftChild, Right(rightChild)) =>
+            Right(RedNode(leftChild, value, rightChild))
+        }
+      }
+    }
+
     override def contains(elem: T): Boolean = {
       if (elem < value) {
         left.contains(elem)
@@ -145,6 +283,11 @@ object RedBlackTree {
 
     override def fold[U](base: U)(combine: (U, T) => U): U = {
       right.fold(combine(left.fold(base)(combine), value))(combine)
+    }
+
+    override protected def max: Option[T] = right.max match {
+      case None => Some(value)
+      case Some(max) => Some(max)
     }
   }
 }
