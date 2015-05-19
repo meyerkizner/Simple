@@ -35,19 +35,23 @@ object BinaryHeap {
     import scala.math.Ordering.Implicits._
 
     override def enqueue(elem: T): BinaryHeap[T] = {
-      // if elem < value, elem should be the root and we insert value into a child
-      val toInsert = if (elem < value) value else elem
-      val newRoot = if (elem < value) elem else value
-      // to make sure we get a valid binary heap, insert into the leftmost imperfect child
-      // if both children are perfect, then the shorter one; if both the same height, the left child
-      if (left.size < Math.pow(2, left.height) - 1) {
-        Node(left.enqueue(toInsert), newRoot, right)
-      } else if (right.size < Math.pow(2, right.height) - 1) {
-        Node(left, newRoot, right.enqueue(toInsert))
-      } else if (right.height < left.height) {
-        Node(left, newRoot, right.enqueue(toInsert))
+      if (elem != value) {
+        // if elem < value, elem should be the root and we insert value into a child
+        val toInsert = if (elem < value) value else elem
+        val newRoot = if (elem < value) elem else value
+        // to make sure we get a valid binary heap, insert into the leftmost imperfect child
+        // if both children are perfect, then the shorter one; if both the same height, the left child
+        if (left.size < Math.pow(2, left.height) - 1) {
+          Node(left.enqueue(toInsert), newRoot, right)
+        } else if (right.size < Math.pow(2, right.height) - 1) {
+          Node(left, newRoot, right.enqueue(toInsert))
+        } else if (right.height < left.height) {
+          Node(left, newRoot, right.enqueue(toInsert))
+        } else {
+          Node(left.enqueue(toInsert), newRoot, right)
+        }
       } else {
-        Node(left.enqueue(toInsert), newRoot, right)
+        this
       }
     }
 
