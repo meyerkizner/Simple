@@ -8,7 +8,7 @@ final class BinomialHeap[T: Ordering] private (private val trees: List[BinomialH
   }
 
   override def enqueue(elem: T): BinomialHeap[T] = {
-    val newTrees = List(BinomialHeap.Node(elem, Nil))
+    val newTrees = List(BinomialHeap.Node(elem, IndexedSeq.empty))
     new BinomialHeap(trees, newTrees)
   }
 
@@ -20,7 +20,7 @@ final class BinomialHeap[T: Ordering] private (private val trees: List[BinomialH
       case None => this
       case Some(removedTree) =>
         val otherTrees = trees.filterNot(removedTree.eq)
-        new BinomialHeap(otherTrees, removedTree.children.reverse)
+        new BinomialHeap(otherTrees, removedTree.children.toList)
     }
   }
 
@@ -28,14 +28,14 @@ final class BinomialHeap[T: Ordering] private (private val trees: List[BinomialH
 }
 
 object BinomialHeap {
-  private case class Node[T: Ordering](value: T, children: List[Node[T]]) {
+  private case class Node[T: Ordering](value: T, children: IndexedSeq[Node[T]]) {
     import scala.math.Ordering.Implicits._
 
     private[BinomialHeap] def merge(other: Node[T]): Node[T] = {
       if (value < other.value) {
-        Node(value, other :: children)
+        Node(value, children :+ other)
       } else {
-        Node(other.value, this :: other.children)
+        Node(other.value, other.children :+ this)
       }
     }
   }
@@ -58,7 +58,7 @@ object BinomialHeap {
         if (h1.children.length == h3.children.length) {
           h2 :: mergeTrees(t1, t2, Some(h1.merge(h3)))
         } else {
-          h3 +: mergeTrees(l1, l2, None)
+          h3 :: mergeTrees(l1, l2, None)
         }
       } else {
         if (h2.children.length == h3.children.length) {
