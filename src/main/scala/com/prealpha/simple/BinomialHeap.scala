@@ -30,8 +30,11 @@ final class BinomialHeap[T: Ordering] private (private val trees: List[BinomialH
 object BinomialHeap {
   private case class Node[T: Ordering](value: T, children: IndexedSeq[Node[T]]) {
     import scala.math.Ordering.Implicits._
+    
+    val order = children.length
 
-    private[BinomialHeap] def merge(other: Node[T]): Node[T] = {
+    def merge(other: Node[T]): Node[T] = {
+      assert(order == other.order)
       if (value < other.value) {
         Node(value, children :+ other)
       } else {
@@ -46,28 +49,28 @@ object BinomialHeap {
     case (Nil, _, None) => l2
     case (Nil, _, Some(h3)) => mergeTrees(List(h3), l2, None)
     case (h1 :: t1, h2 :: t2, None) =>
-      if (h1.children.length == h2.children.length) {
+      if (h1.order == h2.order) {
         mergeTrees(t1, t2, Some(h1.merge(h2)))
-      } else if (h1.children.length < h2.children.length) {
+      } else if (h1.order < h2.order) {
         h1 :: mergeTrees(t1, l2, None)
       } else {
         h2 :: mergeTrees(l1, t2, None)
       }
     case (h1 :: t1, h2 :: t2, Some(h3)) =>
-      if (h1.children.length == h2.children.length) {
-        if (h1.children.length == h3.children.length) {
+      if (h1.order == h2.order) {
+        if (h1.order == h3.order) {
           h3 :: mergeTrees(t1, t2, Some(h1.merge(h2)))
         } else {
           h3 :: mergeTrees(l1, l2, None)
         }
-      } else if (h1.children.length < h2.children.length) {
-        if (h1.children.length == h3.children.length) {
+      } else if (h1.order < h2.order) {
+        if (h1.order == h3.order) {
           mergeTrees(t1, l2, Some(h1.merge(h3)))
         } else {
           h3 :: mergeTrees(l1, l2, None)
         }
       } else {
-        if (h2.children.length == h3.children.length) {
+        if (h2.order == h3.order) {
           mergeTrees(l1, t2, Some(h2.merge(h3)))
         } else {
           h3 :: mergeTrees(l1, l2, None)
