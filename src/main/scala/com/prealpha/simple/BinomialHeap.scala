@@ -54,9 +54,15 @@ object BinomialHeap {
         h2 :: mergeTrees(l1, t2, None)
       }
     case (h1 :: t1, h2 :: t2, Some(h3)) =>
-      if (h1.children.length <= h2.children.length) {
+      if (h1.children.length == h2.children.length) {
         if (h1.children.length == h3.children.length) {
-          h2 :: mergeTrees(t1, t2, Some(h1.merge(h3)))
+          h3 :: mergeTrees(t1, t2, Some(h1.merge(h2)))
+        } else {
+          h3 :: mergeTrees(l1, l2, None)
+        }
+      } else if (h1.children.length < h2.children.length) {
+        if (h1.children.length == h3.children.length) {
+          mergeTrees(t1, l2, Some(h1.merge(h3)))
         } else {
           h3 :: mergeTrees(l1, l2, None)
         }
