@@ -57,23 +57,21 @@ object BinomialHeap {
         h2 :: mergeTrees(l1, t2, None)
       }
     case (h1 :: t1, h2 :: t2, Some(h3)) =>
+      assert(h3.order <= h1.order)
+      assert(h3.order <= h2.order)
       if (h1.order == h2.order) {
-        if (h1.order == h3.order) {
-          h3 :: mergeTrees(t1, t2, Some(h1.merge(h2)))
-        } else {
-          h3 :: mergeTrees(l1, l2, None)
-        }
+        h3 :: mergeTrees(t1, t2, Some(h1.merge(h2)))
       } else if (h1.order < h2.order) {
         if (h1.order == h3.order) {
           mergeTrees(t1, l2, Some(h1.merge(h3)))
         } else {
-          h3 :: mergeTrees(l1, l2, None)
+          h3 :: h1 :: mergeTrees(t1, l2, None)
         }
       } else {
         if (h2.order == h3.order) {
           mergeTrees(l1, t2, Some(h2.merge(h3)))
         } else {
-          h3 :: mergeTrees(l1, l2, None)
+          h3 :: h2 :: mergeTrees(l1, t2, None)
         }
       }
   }
